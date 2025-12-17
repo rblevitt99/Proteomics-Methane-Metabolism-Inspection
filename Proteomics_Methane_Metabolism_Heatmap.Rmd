@@ -1,0 +1,215 @@
+---
+title: "Proteomics Methane Metabolism"
+output: html_document
+date: "2025-09-05"
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r required packages and directory}
+library(ggplot2)
+library(pheatmap)
+library(readxl)
+library(RColorBrewer)
+```
+
+```{r load in data}
+heatmap=read_xlsx("Proteomics_CH4_Metabolism_Heatmap.xlsx")
+View(heatmap)
+
+
+```
+
+```{r matrix the data}
+heatmap_matrix <- data.matrix(heatmap)
+View(heatmap_matrix)
+#heatmap_matrix <- heatmap_matrix[complete.cases(heatmap_matrix), ] # removes rows with NA
+#View(heatmap_matrix)
+```
+
+```{r scale the data}
+heatmap_data_scaled_t=scale(t(heatmap_matrix)) # Essentially does z score normalization
+heatmap_data_scaled = t(heatmap_data_scaled_t)
+#View(heatmap_data_scaled)
+```
+
+
+```{r heatmap code}
+my_col_order <- c("Low_Ca_vs_Ca","Ca_vs_Low_Fe", "Low_Fe_vs_Fe","Fe_vs_Mix","Mix_vs_Ni",
+                  "Ni_vs_Nd", "Nd_vs_W", "W_vs_Cu") # establishes the order pf the columns
+
+my_palette <- colorRampPalette(c("blue",
+                                 "white",
+                                 "red"))  # establishes a color pallete
+
+
+          
+file_path="/Users/ryanblevitt/Desktop/Proteomics_1/Proteomics_Meth_Metabolism_Heatmap.pdf"
+
+
+heatmap=pheatmap(heatmap_data_scaled[,my_col_order],    
+         na_col= "grey9",
+         main = "Varaiation in Methane Metabolism Associated Proteins Across Metal Conditions",
+         cellwidth =  50,
+         cellheight = 14,
+         #border_color ="black",
+         cluster_cols = FALSE,    # overrides R's defult column order.
+         cluster_rows = FALSE, # Keeps the order of locus tag from 5'-3'
+         fontsize_row =  10,
+         file=file_path)
+```
+
+
+
+
+
+
+
+```{r}
+Prot_CH4 = read_xlsx("DE_CH4_Proteomics_Data_4_Plots.xlsx", sheet = "Quantity_of_Regulation")
+
+ordered_cond = factor(Prot_CH4$Condition, levels=c("LowCa_vs_Ca","Ca_vs_Low_Fe","LowFe_vs_Fe","Fe_vs_Mix","Mix_vs_Ni","Ni_vs_Nd","Nd_vs_W","W_vs_Cu"))
+
+
+levels(ordered_cond)
+
+```
+
+```{r,fig.width=15, fig.height=12}
+condition_orders =length(levels(ordered_cond))
+vlines = seq(1.5, condition_orders - 0.5, by = 1)
+          
+
+Overall_Regulation = ggplot(Prot_CH4, aes(x=ordered_cond, y= Quantity, fill = Regulation)) +
+  geom_col(position = position_dodge(width = 0.9), colour = "black") + 
+  scale_fill_manual(values = c("Up" = "darkorange", "Down" = "steelblue")) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_vline(xintercept =vlines, linetype = "dotted", color = "black" ) +
+  theme_bw() +
+  labs(title = "Quantity of DE Methane Metabolsim Associated Proteins Across Conditions ", x= "Media Condition", y = "Quantity of DE Proteins") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+  
+#Overall_Regulation
+
+ggsave(
+  "Meth_Metabol_Prot_Regulation.pdf",
+  width = 22,
+  height = 15,
+  dpi = 1200
+)
+
+```
+
+
+
+
+
+
+```{r}
+Prot_CH4 = read_xlsx("DE_CH4_Proteomics_Data_4_Plots.xlsx", sheet = "Descriptive_Regulation")
+#View(Prot_CH4)
+
+ordered_cond = factor(Prot_CH4$Condition, levels=c("LowCa_vs_Ca","Ca_vs_Low_Fe","LowFe_vs_Fe","Fe_vs_Mix","Mix_vs_Ni","Ni_vs_Nd","Nd_vs_W","W_vs_Cu"))
+
+condition_orders =length(levels(ordered_cond))
+vlines = seq(1.5, condition_orders - 0.5, by = 1)
+          
+
+```
+
+```{r,fig.width=1, fig.height=8}
+
+#colors <- brewer.pal(12, "Paired")
+#num_colors <- 14
+#colors <- colorRampPalette(brewer.pal(14, "Set2"))(num_colors)
+
+inter = interaction(Prot_CH4$protein_id)
+levels(inter)
+
+
+
+
+Meth = ggplot(Prot_CH4, aes(x=interaction(protein_id,ordered_cond), y= Averaged_Log2Ratio, fill = Regulation)) +
+  #geom_col(width = 0.8,  colour = "black") +
+  geom_col(position = position_dodge(width = 0.9), width = 0.45 , colour = "black") + # black outline helps
+  scale_fill_manual(values = c("Up" = "darkorange", "Down" = "steelblue")) +
+  #geom_vline(xintercept =vlines, linetype = "dotted", color = "black" ) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_text(aes(label = protein_id, vjust = -0.5, angle = 45)) +
+  theme_bw() +
+  ylim(-6,5) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Log 2 Fold Change of DE Methane Metabolsim Associated Proteins Across Conditions ", x= "Media Condition", y = "Log 2 Fold Change") 
+
+ggsave("Proteomics_Metha_Metabolism_Regulation.pdf", 
+       plot = Meth,
+       width = 15,
+       height = 10,
+      dpi = 1200
+  )
+
+#Meth
+
+
+
+```
+
+
+```{r,fig.width=1, fig.height=8}
+
+#colors <- brewer.pal(12, "Paired")
+#num_colors <- 14
+#colors <- colorRampPalette(brewer.pal(14, "Set2"))(num_colors)
+
+inter = interaction(Prot_CH4$protein_id)
+levels(inter)
+
+Interaction = interaction(Prot_CH4$protein_id,ordered_cond)
+
+levels(Interaction)
+
+order = factor(Interaction, levels=c("WP_014149865.1.LowCa_vs_Ca","WP_014149645.1.LowCa_vs_Ca","WP_014146724.1.LowCa_vs_Ca","WP_014148889.1.LowCa_vs_Ca",
+                                            "WP_014149907.1.LowCa_vs_Ca",
+                                            "WP_014149289.1.Ca_vs_Low_Fe","WP_206742858.1.Ca_vs_Low_Fe",
+                                            "WP_014147345.1.LowFe_vs_Fe","WP_014149857.1.LowFe_vs_Fe","WP_014149907.1.LowFe_vs_Fe",
+                                            "WP_014147945.1.Fe_vs_Mix","WP_206742858.1.Fe_vs_Mix",
+                                            "WP_014149648.1.Mix_vs_Ni","WP_014147020.1.Mix_vs_Ni",
+                                            "WP_014146724.1.Ni_vs_Nd","WP_014149872.1.Ni_vs_Nd","WP_014149648.1.Ni_vs_Nd","WP_014149865.1.Ni_vs_Nd",
+                                            "WP_014146724.1.Nd_vs_W","WP_014147757.1.Nd_vs_W","WP_014149648.1.Nd_vs_W","WP_014149865.1.Nd_vs_W",
+                                            "WP_014149646.1.W_vs_Cu"))
+
+
+
+
+
+Meth = ggplot(Prot_CH4, aes(x=order, y= Averaged_Log2Ratio, fill = Regulation)) +
+  #geom_col(width = 0.8,  colour = "black") +
+  geom_col(position = position_dodge(width = 0.5), width = 0.6 , colour = "black") + # black outline helps
+  scale_fill_manual(values = c("Up" = "darkorange", "Down" = "steelblue")) +
+  coord_flip() +
+  #geom_vline(xintercept =vlines, linetype = "dotted", color = "black" ) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_text(aes(label = product, vjust = -0.5, angle = 45)) +
+  theme_bw() +
+  ylim(-8,8) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Log 2 Fold Change of DE Methane Metabolsim Associated Proteins Across Conditions ", x= "Media Condition", y = "Log 2 Fold Change") 
+#Meth
+ggsave("Proteomics_Meth_t_Metabolism_Regulation.pdf", 
+       plot = Meth,
+       width = 20,
+       height = 18,
+      dpi = 1200
+  )
+
+#Meth
+
+
+
+```
+
